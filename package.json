@@ -1,0 +1,49 @@
+{
+  "name": "sidebar-usage",
+  "version": "0.1.0",
+  "description": "TUI sidebar plugin for opencode that shows per-turn and session-cumulative token usage, cache hit rate, and cost.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@opentui/solid": "0.2.16",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@opentui/solid": "0.2.16",
+    "solid-js": "^1.9.0",
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build": "bun run build.mjs",
+    "pack": "npm pack",
+    "prepublishOnly": "npm run build"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HunkYuan/opencode-sidebar-usage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HunkYuan/opencode-sidebar-usage/issues"
+  },
+  "homepage": "https://github.com/HunkYuan/opencode-sidebar-usage#readme",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "tui",
+    "sidebar",
+    "tokens"
+  ]
+}
