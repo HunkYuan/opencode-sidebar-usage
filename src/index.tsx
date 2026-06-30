@@ -1,9 +1,22 @@
-import { createMemo, createSignal, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 
 const id = "sidebar-usage"
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-US")
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" })
+
+function progressBar(pct, width = 12) {
+  const p = Math.max(0, Math.min(100, Number(pct) || 0))
+  const filled = Math.round((p / 100) * width)
+  return "█".repeat(filled) + "░".repeat(width - filled)
+}
+
+function pctColor(pct, theme) {
+  const p = Number(pct) || 0
+  if (p < 20) return theme.success
+  if (p < 50) return theme.warning ?? theme.text
+  return theme.error
+}
 
 function Row(props) {
   return (
@@ -89,6 +102,55 @@ function View(props) {
 
   const show = createMemo(() => !!last() || total().input + total().output > 0)
 
+  const minimaxProvider = createMemo(() => {
+    const m = last()
+    if (!m) return undefined
+    return api.state.provider.find((p) =>
+      p.id === m.providerID &&
+      p.key &&
+      (p.id.toLowerCase().includes("minimax") || p.name.toLowerCase().includes("minimax"))
+    )
+  })
+
+  const [tpOpen, setTpOpen] = createSignal(true)
+  const [tpData, setTpData] = createSignal()
+  const [tpLoading, setTpLoading] = createSignal(false)
+  const [tpError, setTpError] = createSignal()
+  const [tpRefreshKey, setTpRefreshKey] = createSignal(0)
+
+  const fetchTokenPlan = async () => {
+    const key = minimaxProvider()?.key
+    if (!key) return
+    setTpLoading(true)
+    setTpError(null)
+    try {
+      const res = await fetch("https://www.minimaxi.com/v1/token_plan/remains", {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+      })
+      const data = await res.json()
+      setTpData(data)
+    } catch (e) {
+      setTpError(String(e))
+    } finally {
+      setTpLoading(false)
+    }
+  }
+
+  createEffect(() => {
+    sessionID
+    tpRefreshKey()
+    if (minimaxProvider()) fetchTokenPlan()
+  })
+
+  createEffect(() => {
+    if (!minimaxProvider()) return
+    const timer = setInterval(() => fetchTokenPlan(), 600_000)
+    onCleanup(() => clearInterval(timer))
+  })
+
   return (
     <Show when={show()}>
       <box flexDirection="column">
@@ -146,6 +208,50 @@ function View(props) {
           </box>
         </Show>
       </box>
+      <Show when={minimaxProvider()}>
+        <box flexDirection="column" paddingTop={1}>
+          <box flexDirection="row" gap={1} onMouseDown={() => setTpOpen((v) => !v)}>
+            <text fg={theme().text}>{tpOpen() ? "▼" : "▶"}</text>
+            <text fg={theme().text}>
+              <b>Minimax TokenPlan</b>
+            </text>
+            <text
+              fg={theme().textMuted}
+              onMouseDown={(e) => {
+                e.stopPropagation()
+                setTpRefreshKey((v) => v + 1)
+              }}
+            >
+              {" "}↻
+            </text>
+          </box>
+          <Show when={tpOpen()}>
+            <Show when={tpLoading() && !tpData()}>
+              <text fg={theme().textMuted}>loading...</text>
+            </Show>
+            <Show when={tpError() && !tpLoading()}>
+              <text fg={theme().error}>{tpError()}</text>
+            </Show>
+            <Show when={tpData()}>
+              <For each={((tpData() as any)?.model_remains ?? []).filter((m: any) => m?.model_name === "general")}>
+                {(item: any) => (
+                  <box flexDirection="column" paddingTop={1}>
+                    <text fg={theme().text}>
+                      <b>{item.model_name}</b>
+                    </text>
+                    <Row
+                      theme={theme()}
+                      label="5h窗口"
+                      accent={pctColor(100 - item.current_interval_remaining_percent, theme())}
+                      value={`${progressBar(100 - item.current_interval_remaining_percent)} ${100 - item.current_interval_remaining_percent}%`}
+                    />
+                  </box>
+                )}
+              </For>
+            </Show>
+          </Show>
+        </box>
+      </Show>
     </Show>
   )
 }
