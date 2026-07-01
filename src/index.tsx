@@ -5,6 +5,16 @@ const id = "sidebar-usage"
 const fmt = (n) => Number(n || 0).toLocaleString("en-US")
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" })
 
+function fmtRemains(ms) {
+  const total = Math.max(0, Number(ms) || 0)
+  const totalSec = Math.floor(total / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}m`
+  return `${m}m${String(s).padStart(2, "0")}s`
+}
+
 function progressBar(pct, width = 12) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0))
   const filled = Math.round((p / 100) * width)
@@ -245,6 +255,7 @@ function View(props) {
                       accent={pctColor(100 - item.current_interval_remaining_percent, theme())}
                       value={`${progressBar(100 - item.current_interval_remaining_percent)} ${100 - item.current_interval_remaining_percent}%`}
                     />
+                    <Row theme={theme()} label="剩余" value={fmtRemains(item.remains_time)} />
                   </box>
                 )}
               </For>
